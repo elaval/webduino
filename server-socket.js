@@ -38,6 +38,7 @@ app.configure(function () {
 
 board.on("ready", function() {
   // pin mode constants are available on the Pin class
+  /*
   this.pinMode(13, five.Pin.INPUT);
 
   var testpin = new five.Pin(13);
@@ -45,6 +46,7 @@ board.on("ready", function() {
   testpin.read(13, function(value) {
   	console.log(value);
   });
+*/
 
   
   // Set list of PIN objects
