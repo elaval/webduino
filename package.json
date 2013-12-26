@@ -6,6 +6,11 @@
       "express": "3.x",
       "socket.io":"*",
       "johnny-five":"*",
-      "node-inspector":"*"
+      "node-inspector":"*",
+      "restify":"*",
+      "ecstatic":"*",
+      "escape-regexp-component":"*",
+      "assert-plus":"*",
+      "mime":""
    }
 }

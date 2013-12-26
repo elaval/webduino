@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 	<!-- Bootstrap -->
-    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <link href="./css/bootstrap.min.css" rel="stylesheet">
 
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
@@ -44,28 +44,24 @@
 
 <body>
 	<div class="container">
-		<h1>Automatic light system</h1>
+		<h1>TIDE Web Arduino</h1>
 
 		<div class="row">
-			<div class="col-xs-4">
-			  <span>Light level</span>
+			<div class="col-xs-6">
+				<h2>LEDS</h2>
+				<div class="row myleds"></div>
 			</div>
-			<div class="input-group col-xs-4">
-				<span class="input-group-addon" id="sensor2"></span>
-			 	<span class="input-group-addon">%</span>
+
+			<div class="col-xs-6">
+				<h2>SENSORS</h2>
+				<div class="row mysensors"></div>
 			</div>
-		</div>
-
-		<div class="row sparkline"> 
-		</div>
-
-		<div class="row myled13">
-		</div>
-		<div class="row myled12">
 		</div>
 		
 		<div class="row" id="msg"> 
 		</div>
+
+		<div class="row" id="svgcontainer"></div>
 
 	</div>
 
@@ -85,16 +81,28 @@
 	</script>
 
 
-	<script src="/js/libs/jquery/jquery-2.0.3.min.js"></script>
- 	<script src="/js/libs/underscore/underscore-min.js"></script>
-    <script src="/js/libs/bootstrap/bootstrap.min.js"></script>
+
+
+	<script type="text/template" id="Led_template">
+		<li><%= id %> <img width="20px" src="/img/light<%=state%>.png">
+	</script>
+
+	<script type="text/template" id="Sensor_template">
+		<li><%= id %> <%= value %>
+	</script>
+
+
+
+	<script src="./js/libs/jquery/jquery-2.0.3.min.js"></script>
+ 	<script src="./js/libs/underscore/underscore-min.js"></script>
+    <script src="./js/libs/bootstrap/bootstrap.min.js"></script>
     
     <script src="/socket.io/socket.io.js"></script>
     
-	<script src="/js/libs/backbone/backbone-min.js"></script>
-	<script src="/js/libs/d3/d3.min.js"></script>
-	<script src="/js/tideuino.js"></script>
-	<script src="/js/app2.js"></script>
+	<script src="./js/libs/backbone/backbone-min.js"></script>
+	<script src="./js/libs/d3/d3.min.js"></script>
+	<script src="./js/tideuino.js"></script>
+	<script src="./js/app2.js"></script>
 
 </body>
 </html>

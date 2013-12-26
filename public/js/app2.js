@@ -1,18 +1,44 @@
-App.baseurl = window.location.href;
+App.baseurl = window.location.origin;
 
 $(document).ready(function() {
-	//App.socket = new WebSocket('ws://192.168.2.123:8080'); 
-	//App.socket.onopen = function() {console.log("CONNECTED")};
-	
+	App.views.lab = new App.views.Lab();
+	$("#svgcontainer").html(App.views.lab.$el);
+
 	App.board = App.RemoteBoard();
 	App.board.connect(App.baseurl, function() {
 		console.log("CONNECTED");
 		//App.board.monitorSensor("2", function() {});
 		App.collections.pins = new App.collections.Pins();
-		App.collections.pins.on("reset", function() {
-			
 
+		App.switch = new App.models.Switch();
+
+		App.sensors = new App.collections.Sensors();
+		App.views.mysensors = new App.views.Sensors({collection:App.sensors});
+		$(".mysensors").html(App.views.mysensors.$el);
+
+		App.sensors.fetch();
+		App.sensors.on("sync", function() {
+			if (!App.sensors.get("A0")) App.sensors.create({id:"A0"});
+			if (!App.sensors.get("A1")) App.sensors.create({id:"A1"});
+			if (!App.sensors.get("A2")) App.sensors.create({id:"A2"});
+			App.switch.setSensor(App.sensors.get("A2"));
 		});
+
+
+		App.leds = new App.collections.Leds();
+		App.views.myleds = new App.views.MyLEDs({collection:App.leds});
+		$(".myleds").html(App.views.myleds.$el);
+
+		App.leds.fetch();
+		App.leds.on("sync", function() {
+			if (!App.leds.get(13)) App.leds.create({id:13});
+			if (!App.leds.get(12)) App.leds.create({id:12});
+			if (!App.leds.get(11)) App.leds.create({id:11});
+			App.switch.setLed(App.leds.get(13));
+		});
+
+		App.testswitch  = new App.models.Switch({sensor:App.sensors.get("A2"), led:App.leds.get(13)})
+
 		App.collections.pins.fetch({
 			success: function() {			
 				App.views.ledView13 = new App.views.LEDView2({model: App.collections.pins.get(13)});
@@ -24,62 +50,10 @@ $(document).ready(function() {
 				App.views.lightSensorView = new App.views.LightSensorView({model: App.collections.pins.get("A2")});
 				$("#sensor2").html(App.views.lightSensorView.$el);
 
-				App.models.monitorA2 = new App.models.Monitor({id:"A2", active:1})
-				App.models.monitorA2.save();
 			}
 		});
 
 	})
-	
-	
-	
-
-	
-	
-	/*
-	App.models.sensor = new App.models.Sensor();
-	
-  	//App.socket = io.connect('http://192.168.2.123:8080');
-	var href = window.location.href;
-  	App.socket = io.connect(href);
-  	
-  	
-  	App.socket.on('connect', function () { 
-  	  App.socket.emit("newsensor", {pin:"A2"}, function(msg) {console.log(msg)} );
-  	  App.socket.emit("newled", {pin:13}, function(msg) {console.log(msg)} );
-  	  App.socket.emit("newled", {pin:12"}, function(msg) {console.log(msg)} );
-    });
-    
-  	App.socket.on('sensor', function (data) {
-  		//$("#msg").html(data.value);
-  		if (data.pin == 2) App.models.sensor.newsample(data);
-  	});
-  	
-  	App.views.lightSensorView = new App.views.LightSensorView({
-		//el:"input#sensor",
-		sensor: App.models.sensor
-	});
-	$("#sensor2").html(App.views.lightSensorView.$el);
-
-	App.views.sparklineView = new App.views.SparklineView({sensor:App.models.sensor});
-	$("div.sparkline").html(App.views.sparklineView.$el)
-*/
-	/*
-	App.justturnedon = false;
-	App.views.lightSensorView = new App.views.LightSensorView({
-		//el:"input#sensor",
-		sensor: App.models.sensor
-	});
-	$("#sensor2").html(App.views.lightSensorView.$el);
-
-	App.views.buttonPanelView = new App.views.ButtonPanelView({el:".buttonPanel"});
-	
-
-	App.views.remoteLed = new App.views.RemoteLed();
-	App.views.remoteLed.setSensor(App.models.sensor, 20);
-	*/
-	
-
 
 
 });
@@ -93,9 +67,10 @@ App.RemoteBoard = function() {
 	var board = {};
 	
 	board.connect = function(url, callback) {
-		socket = io.connect(url);
+		// When board is connected, create socket through socket.io
+		socket = io.connect(App.baseurl);
 		
-		// Listen to sensor messages
+		// Listen to pin chaneg of value messages
 		socket.on("pin", function(data) {
 			var id = data.id;
 			
@@ -104,81 +79,30 @@ App.RemoteBoard = function() {
 			}
 
 		});
-/*
-		// Listen to sensor messages
+
+		// Listen to sensor data messages
 		socket.on("sensor", function(data) {
-			var pin = data.pin;
+			var id = data.id;
 			
-			if (App.collections.pins && App.collections.pins.get(pin)) {
-				App.collections.pins.get(pin).set("value", data.value);
+			if (App.sensors && App.sensors.get(id)) {
+				App.sensors.get(id).set(data);
 			}
 
-			if (sensorcallbacks[pin]) {
-				sensorcallbacks[pin](data);
-			}
 		});
-*/
+
+		// Listen to led change of state messages
+		socket.on("led", function(data) {
+			var id = data.id;
+
+			if (App.leds && App.leds.get(id)) {
+				App.leds.get(id).set(data);
+			}
+
+		});
+
 		
 		socket.on('connect', callback);
 		return board;
-	}
-
-	board.monitorSensor = function(pin) {
-		socket.emit("monitorSensor", {'pin':pin}, function(msg) {console.log(msg)});
-
-		return board;
-	}
-	
-	board.addSensor = function(pin, ondata) {
-		socket.emit("newsensor", {'pin':pin}, function(msg) {console.log(msg)});
-		
-		sensorcallbacks[pin] = ondata;
-		return board;
-	}
-	
-	board.addLed = function(pin) {
-		socket.emit("newled", {'pin':pin}, function(msg) {console.log(msg)} );
-		return board;
-	}
-	
-	board.led = function(pin) {
-		if (!leds[pin]) {
-			leds[pin] = new Backbone.Model();
-
-			var led = leds[pin];
-
-			led.turnon = function() {
-				socket.emit("led", {'pin':pin, 'action': 'on'}, function(msg) {
-					if (msg.result == "OK") {
-						led.set("value",msg.value);
-						console.log(msg.value)
-					}
-				} );
-				return led;
-			};
-			
-			led.turnoff = function() {
-				socket.emit("led", {'pin':pin, 'action': 'off'},  function(msg) {
-					if (msg.result == "OK") {
-						led.set("value",msg.value);
-						console.log(msg.value)
-					}
-				} );
-				return led;
-			};
-
-			led.toggle = function() {
-				socket.emit("led", {'pin':pin, 'action': 'toggle'},  function(msg) {
-					if (msg.result == "OK") {
-						led.set("value",msg.value);
-						console.log(msg.value)
-					}
-				} );
-				return led;
-			};
-		}
-		
-		return leds[pin];
 	}
 
 

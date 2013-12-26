@@ -3,6 +3,65 @@ App.views = {};
 App.models = {};
 App.collections = {};
 
+App.views.Lab = Backbone.View.extend({
+	initialize : function() {
+		this.mydata = [{x:100, y:100}, {x:200, y:200}];
+		this.led1 = new Backbone.Model({x:100, y:100, value:"8345"});
+		this.mydata = [this.led1];
+		this.svg = d3.select(this.el).append("svg").append("g");
+		this.render();
+	},
+
+	render : function() {
+		var self = this;
+		var drag = d3.behavior.drag()
+			.on('dragstart', function(d,i) {
+				self.svg 
+					.append("g")
+					.attr("class", "placeholder")
+					.append("rect")
+					.attr({height:20, width:20})
+				console.log("dragstart")
+			})
+		    .on('drag', function (d,i) {
+		        d.set("x", d.get("x") + d3.event.dx);
+		        d.set("y", d.get("y") + d3.event.dy);
+
+		        var target = d3.select("rect.placeholder");
+		        //target.attr("x", d.get("x")).attr("y", d.get("y"));
+		        
+		        target.attr("transform", function (d, i) {
+		            return "translate(" + [d.get("x"),d.get("y")] + ")";
+		        })
+
+	    	});
+
+		this.visor = this.svg.selectAll("g.visor")
+			.data(this.mydata)
+			.enter()
+				.append("g")
+				.attr("class", "visor")
+				.attr("transform", function (d, i) {
+		            return "translate(" + [d.get("x"),d.get("y")] + ")";
+		        })
+		        .call(drag)
+
+		this.visor.append("rect")
+			.attr("x", 0)
+			.attr("y", 0)
+			.attr("height", function(d) {return 20})
+			.attr("width", function(d) {return 20})
+
+		this.visor.append("text")
+			.attr("dx", function(d) { return  8; })
+      		.attr("dy", 3)
+      		.style("text-anchor", function(d) { return d.children ? "end" : "start"; })
+      		.text(function(d) { return d.get("value"); })
+					
+	}
+
+})
+
 App.views.RemoteLed = Backbone.View.extend({
 	initialize: function() {
 		this.state = 'off';
@@ -45,7 +104,7 @@ App.views.RemoteLed = Backbone.View.extend({
 })
 
 
-App.models.Sensor = Backbone.View.extend({
+App.models.Sensor2 = Backbone.View.extend({
 	initialize : function() {
 		_.bindAll(this,"newsample");
 
@@ -110,7 +169,6 @@ App.views.LEDView2 = Backbone.View.extend({
 	},
 
 	ledValue : function(d) {
-		console.log(this.model.get("id") + " - "+this.model.get("value"))
 		if (this.model.get("value") == 1) {
 			this.$("div.light").removeClass("off");
 			this.$("div.light").addClass("on");
@@ -197,7 +255,6 @@ App.views.SparklineView = Backbone.View.extend({
 		var self = this;
 
 		this.sensor = options && options.sensor ? options.sensor : null;
-		console.log("Spark2: Init")
 
 		this.data = [];
 		this.width = this.$el.width()
@@ -270,10 +327,118 @@ App.views.SparklineView = Backbone.View.extend({
 
 })
 
+/* 
+==============================
+* VIEWS
+*
+*/ 
+
+App.views.Sensor = Backbone.View.extend({
+
+	initialize: function() {
+		this.listenTo(this.model, "change", this.render);
+		this.template = _.template($("#Sensor_template").html());
+		this.render();
+	},
+
+	render: function() {
+		var self = this;
+		var data = this.model.toJSON();
+		if (!data.value) data.value=0;
+
+		var html = this.template(data);
+		this.$el.html(html);
+
+		return this;
+	},
+
+})
+
+App.views.Sensors = Backbone.View.extend({
+	initialize: function() {
+		this.listenTo(this.collection, "sync", this.render);
+	},
+
+	render: function() {
+		var self = this;
+
+		this.$el.html("");
+
+		this.collection.each(function(item) {
+			var itemview = new App.views.Sensor({model:item});
+			self.$el.append(itemview.$el);
+		})
+
+		return this;
+	}
+
+})
+
+
+App.views.Led = Backbone.View.extend({
+	events : {
+		"click" : "click"
+	},
+
+	initialize: function() {
+		var self = this;
+
+		this.listenTo(this.model, "change", function() {
+			self.render();
+		});
+
+		this.template = _.template($("#Led_template").html());
+		this.render();
+	},
+
+	render: function() {
+		var self = this;
+		var data = this.model.toJSON();
+		var html = this.template(data);
+		this.$el.html(html);
+
+		return this;
+	},
+
+	click: function() {
+		var newstate = this.model.get("state") == "on" ? "off" : "on";
+
+		this.model.set("state", newstate);
+		this.model.save();
+	}
+
+
+})
+
+App.views.MyLEDs = Backbone.View.extend({
+	initialize: function() {
+		this.listenTo(this.collection, "sync", this.render);
+	},
+
+	render: function() {
+		var self = this;
+
+		this.$el.html("");
+
+		this.collection.each(function(d) {
+			var ledView = new App.views.Led({model:d});
+			self.$el.append(ledView.$el);
+		})
+
+		return this;
+	}
+
+
+})
+
+/* ==============================
+* MODELS & COLLECTIONS
+*
+=================================*/ 
 
 App.models.Monitor = Backbone.Model.extend({
 	url : function() {
-		return App.baseurl+"monitor/"+this.id;
+		return App.baseurl+"/monitor/"+this.id;
 	}
 
 });
@@ -284,5 +449,75 @@ App.models.Pin = Backbone.Model.extend({
 
 App.collections.Pins = Backbone.Collection.extend({
 	model:App.models.Pin,
-	url: function() {return App.baseurl+"pin"}
+	url: function() {return App.baseurl+"/pins"}
 })
+
+// Led - Models
+App.models.Led = Backbone.Model.extend({
+	url: function() {
+		return App.baseurl+"/leds/"+this.id;
+	},
+
+	turnon: function() {
+		this.set("state", "on");
+		this.save();
+	},
+
+	turnoff: function() {
+		this.set("state", "off");
+		this.save();
+	}
+}) 
+
+App.collections.Leds = Backbone.Collection.extend({
+	model: App.models.Led,
+
+	url: function() {
+		return App.baseurl+"/leds";
+	}
+}) 
+
+App.collections.Sensors = Backbone.Collection.extend({
+	url: function() {
+		return App.baseurl+"/sensors"
+	}
+})
+
+// Auto switch
+App.models.Switch = Backbone.Model.extend({
+	initialize : function(options) {
+		this.sensor = null;
+		this.led = null;
+		this.set("min", 900);
+		this.set("max", 1024);
+	},
+
+	setSensor: function(sensor) {
+		this.sensor = sensor;
+		this.listenTo(this.sensor, "change", this.checkLevel);
+	},
+
+	setLed: function(led) {
+		this.led = led;
+	},
+
+	checkLevel: function() {
+		var value = this.sensor.get("value");
+
+		if (value >= this.get("min") && value <= this.get("max")) {
+			if (this.led && this.led.get("state") != "on") this.led.turnon();
+		} else {
+			if (this.led && this.led.get("state") != "off") this.led.turnoff();
+		}
+
+		
+	}
+
+
+}) 
+
+
+
+
+
+
