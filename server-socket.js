@@ -9,11 +9,11 @@ var interfaces = require('os').networkInterfaces();
 
 var LOCAL_IP
 if (interfaces.wlan0) {
-  LOCAL_IP = interfaces.wlan0[1].address;
+  LOCAL_IP = interfaces.wlan0[0].address;
 } else if (interfaces.en1) {
-  LOCAL_IP = interfaces.en1[1].address;
+  LOCAL_IP = interfaces.en1[0].address;
 } else if (interfaces.eth0) {
-  LOCAL_IP = interfaces.eth0[1].address;
+  LOCAL_IP = interfaces.eth0[0].address;
 } else {
   LOCAL_IP = "127.0.0.1";
 } 
