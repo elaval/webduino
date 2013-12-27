@@ -4,63 +4,583 @@ App.models = {};
 App.collections = {};
 
 App.views.Lab = Backbone.View.extend({
-	initialize : function() {
-		this.mydata = [{x:100, y:100}, {x:200, y:200}];
-		this.led1 = new Backbone.Model({x:100, y:100, value:"8345"});
-		this.mydata = [this.led1];
-		this.svg = d3.select(this.el).append("svg").append("g");
+	initialize : function(options) {
+		this.sensors = options && options.sensors ? options.sensors : new Backbone.Collection();
+		this.leds = options && options.leds ? options.leds : new Backbone.Collection();
+		this.switch = options && options.switch ? options.switch : new Backbone.Model();
+
+		this.mydata = this.sensors.models;
+
+		this.svg = d3.select(this.el).append("svg")
+			.attr("height", 300)
+			.append("g");
+
 		this.render();
+		
+
 	},
 
 	render : function() {
+		this.sensorView = new App.views.LabSensors({el:this.svg[0][0], collection: this.sensors})
+		this.ledView = new App.views.LabLeds({el:this.svg[0][0], collection: this.leds})
+		this.switchView = new App.views.LabSwitch({el:this.svg[0][0], model: this.switch})
+	},
+
+})
+
+App.views.LabSwitch = Backbone.View.extend({
+	initialize : function(options) {
+		this.model = this.model ? this.model : new Backbone.Model();
+
+		this.mydata = [this.model];
+
+		_.each(this.mydata,function(d,i) {
+			d.set({x:150, y:200+i*50, value:"0"})
+		});
+
+		this.svg = d3.select(this.el)
+
+		this.width = 140;
+		this.height = 60;
+
+		this.render();
+
+		this.listenTo(this.model, "change", this.update, this)
+
+		this.listenTo(this.model, "change:sensor", function() {
+			this.listenTo(this.model.get("sensor"), "change", this.update, this)
+		}, this)
+
+		this.listenTo(this.model, "change:led", function() {
+			this.listenTo(this.model.get("led"), "change", this.update, this)
+		}, this)
+
+	},
+
+
+	render: function() {
 		var self = this;
 		var drag = d3.behavior.drag()
-			.on('dragstart', function(d,i) {
-				self.svg 
-					.append("g")
-					.attr("class", "placeholder")
-					.append("rect")
-					.attr({height:20, width:20})
-				console.log("dragstart")
-			})
 		    .on('drag', function (d,i) {
-		        d.set("x", d.get("x") + d3.event.dx);
-		        d.set("y", d.get("y") + d3.event.dy);
+		    	var x = d.get("x") + d3.event.dx;
+		    	var y = d.get("y") + d3.event.dy;
 
-		        var target = d3.select("rect.placeholder");
-		        //target.attr("x", d.get("x")).attr("y", d.get("y"));
-		        
+		    	d.set("x", x);
+		    	d.set("y", y);
+
+		        var target = d3.select(this);
+
 		        target.attr("transform", function (d, i) {
-		            return "translate(" + [d.get("x"),d.get("y")] + ")";
+		            return "translate(" + [x,y] + ")";
 		        })
+	    	})
 
-	    	});
+		this.switches = this.svg.selectAll("g.switch")
+			.data(this.mydata,function(d) {
+				return d.get("id")
+			})
 
-		this.visor = this.svg.selectAll("g.visor")
-			.data(this.mydata)
-			.enter()
-				.append("g")
-				.attr("class", "visor")
-				.attr("transform", function (d, i) {
-		            return "translate(" + [d.get("x"),d.get("y")] + ")";
-		        })
-		        .call(drag)
+		var newswitches = this.switches.enter()
+			.append("g")
+			.attr("class", "switch")
+			.attr("transform", function (d, i) {
+				var x = d.get("x") ? d.get("x") : 150;
+				var y = d.get("y") ? d.get("y") : 10+i*55;
+				d.set({'x':x, 'y':y});
+		        return "translate(" + [x,y] + ")";
+		    })
+		    .call(drag)
 
-		this.visor.append("rect")
+		
+		newswitches.append("line")
+      		.classed("sensor", true)
+     		.attr("stroke-width", 2)
+     		.attr("stroke", "black")
+
+      	newswitches.append("line")
+      		.classed("led", true)
+     		.attr("stroke-width", 2)
+     		.attr("stroke", "black")
+
+     	var newswitches_header = newswitches.append("g")
+
+     	newswitches_header
+     		.append("rect")
+	     		.attr("height", 10)
+	     		.attr("width", this.width)
+	     		.attr("stroke", "blue")
+				.attr("fill", "#DDD")
+
+		newswitches_header	
+			.append("text")
+				.attr("y", 8)
+				.attr("x", this.width/2)
+				.attr("font-size", "8px")
+				.style("text-anchor",  "middle")
+				.text("Switch")
+
+     	var newswitches_body = newswitches.append("g")
+     		.attr("transform", function (d, i) {
+		        return "translate(" + [0,10] + ")";
+		    })
+
+
+		newswitches_body.append("rect")
 			.attr("x", 0)
 			.attr("y", 0)
-			.attr("height", function(d) {return 20})
-			.attr("width", function(d) {return 20})
+			.attr("height", function(d) {return self.height})
+			.attr("width", function(d) {return self.width})
+			.attr("stroke", "blue")
+			.attr("fill", "cyan")
 
-		this.visor.append("text")
-			.attr("dx", function(d) { return  8; })
-      		.attr("dy", 3)
-      		.style("text-anchor", function(d) { return d.children ? "end" : "start"; })
-      		.text(function(d) { return d.get("value"); })
+		newswitches_body.append("text")
+			.attr("dx", function(d) { return  2; })
+      		.attr("dy", 13)
+      		.classed("sensor",true)
+      		.style("text-anchor", "start")
+      		.text(function(d) { 
+      			if (d.get("sensor")) {
+      				var sensor = d.get("sensor");
+      				var sensorid = sensor.get("id") ? sensor.get("id")  : "0";
+      				return "Sensor: "+sensorid;
+      			} else {
+      				return "Sensor: "+"0"; 
+      			}
+      			
+      		})
+
+
+		newswitches_body.append("text")
+			.attr("dx", 2)
+      		.attr("dy", 33)
+      		.classed("value",true)
+      		.style("text-anchor",  "start")
+      		.text(function(d) { 
+
+      			var value = d.get("led") ? d.get("value").get("id") : null;
+      			return "Led: "+ value; 
+      		})
+
+      	newswitches_body.append("text")
+			.attr("dx", 2)
+      		.attr("dy", 53)
+      		.classed("minmax",true)
+      		.style("text-anchor",  "start")
+      		.text(function(d) { 
+      			var min = d.get("min") ? d.get("min") : 0;      			
+      			var max = d.get("max") ? d.get("max") : 0;
+      			return "Min: "+ min+" Max: "+max; 
+      		})
+
+/*
+      	newswitches.append("foreignObject")
+      		.attr("x", 2)
+      		.attr("y", 75)
+      		.attr("width", 200)
+      		.attr("height", 40)
+      		.classed("input",true)
+ 		  .append("xhtml:body")
+		    .html("<input></input>");
+*/
+
+      	this.update();
 					
+	},
+
+	update : function() {
+		var self = this;
+
+		this.switches.select("text.sensor")
+     		.text(function(d) { 
+      			if (d.get("sensor")) {
+      				var sensor = d.get("sensor");
+      				var sensorid = sensor.get("id") ? sensor.get("id")  : "0";
+      				return "Sensor: "+sensorid;
+      			} else {
+      				return "Sensor: "+"0"; 
+      			}
+      			
+      		})
+
+      	this.switches.select("text.minmax")
+      		.text(function(d) { 
+      			var min = d.get("min") ? d.get("min") : 0;      			
+      			var max = d.get("max") ? d.get("max") : 0;
+      			return "Min: "+ min+" Max: "+max; 
+      		})
+
+
+
+		this.switches.select("text.value")
+      		.text(function(d) { 
+      			var value = d.get("led") ? d.get("led").get("id") : null;
+      			return "Led: "+ value; 
+      		})
+
+      	this.switches.select("line.sensor")
+     		.attr("x1", function(d) {
+      			if (d.get("sensor")) {
+      				var sensor = d.get("sensor");
+      				var x = sensor.get("x") ? sensor.get("x")  : "0";
+      				return x-d.get("x")+sensor.get("width")/2;
+      			} else {
+      				return 0; 
+      			}
+      		})
+      		.attr("y1", function(d) {
+      			if (d.get("sensor")) {
+      				var sensor = d.get("sensor");
+      				var y = sensor.get("y") ? sensor.get("y")  : "0";
+      				return y-d.get("y")+sensor.get("height")/2;
+      			} else {
+      				return 0; 
+      			}
+      		})
+      		.attr("x2", function(d) {
+      			return 0
+      		})
+     		.attr("y2", function(d) {
+     			return 0
+     		})
+
+     	this.switches.select("line.led")
+     		.attr("x1", function(d) {
+      			if (d.get("led")) {
+      				var led = d.get("led");
+      				var x = led.get("x") ? led.get("x")  : "0";
+      				return x-d.get("x")+led.get("width")/2;
+      			} else {
+      				return 0; 
+      			}
+      		})
+      		.attr("y1", function(d) {
+      			if (d.get("led")) {
+      				var led = d.get("led");
+      				var y = led.get("y") ? led.get("y")  : "0";
+      				return y-d.get("y")+led.get("height")/2;
+      			} else {
+      				return 0; 
+      			}
+      		})
+      		.attr("x2", function(d) {
+      			return 140
+      		})
+     		.attr("y2", function(d) {
+     			return 0
+     		})
+
+
+
+
+      	//if (this.model.get("sensor")) this.listenTo(this.model.get("sensor"), "change", this.update, this)
+      	//if (this.model.get("led")) thi(s.listenTo(this.model.get("led"), "change", this.update, this)
+
+
+	},
+
+
+
+
+
+})
+
+App.views.LabSensors = Backbone.View.extend({
+	initialize : function(options) {
+		this.collection = this.collection ? this.collection : new Backbone.Collection();
+
+		this.mydata = this.collection.models;
+
+		this.width = 100;
+		this.headerheight = 15;
+		this.height = 40;
+		this.originX = 10;
+		this.originY = 10;
+		this.space = 10
+
+		_.each(this.mydata,function(d,i) {
+			d.set({x:200, y:100+i*50, value:"0"})
+		});
+
+		this.svg = d3.select(this.el)
+
+		this.render();
+
+		this.listenTo(this.collection, "add", this.render, this)
+		this.listenTo(this.collection, "change", this.update, this)
+
+	},
+
+
+	render: function() {
+		var self = this;
+		var drag = d3.behavior.drag()
+		    .on('drag', function (d,i) {
+		    	var x = d.get("x") + d3.event.dx;
+		    	var y = d.get("y") + d3.event.dy;
+
+		    	d.set("x", x);
+		    	d.set("y", y);
+
+		        var target = d3.select(this);
+
+		        target.attr("transform", function (d, i) {
+		            return "translate(" + [x,y] + ")";
+		        })
+	    	})
+
+		this.sensors = this.svg.selectAll("g.sensor")
+			.data(this.mydata,function(d) {
+				return d.get("id")
+			})
+
+		var newsensors = this.sensors.enter()
+			.append("g")
+			.attr("class", "sensor")
+			.attr("transform", function (d, i) {
+				var x = d.get("x") ? d.get("x") : self.originX;
+				var y = d.get("y") ? d.get("y") : self.originY+i*(self.height+self.space);
+				d.set({'x':x, 'y':y});
+				d.set("width", self.width);
+				d.set("height", self.height);
+		        return "translate(" + [x,y] + ")";
+		    })
+		    .call(drag)
+
+
+    	var newsensors_header = newsensors.append("g")
+    		.classed("header", true)
+
+     	newsensors_header
+     		.append("rect")
+	     		.attr("height", this.headerheight)
+	     		.attr("width", this.width)
+	     		.attr("stroke", "blue")
+				.attr("fill", "#DDD")
+
+		newsensors_header	
+			.append("text")
+				.attr("y", this.headerheight-2+"px")
+				.attr("x", this.width/2)
+				.attr("font-size", this.headerheight+"px")
+				.style("text-anchor",  "middle")
+				.text("Sensor")
+
+     	var newsensors_body = newsensors.append("g")
+     		.attr("transform", function (d, i) {
+		        return "translate(" + [0,self.headerheight] + ")";
+		    })
+
+
+		newsensors_body.append("rect")
+			.attr("x", 0)
+			.attr("y", 0)
+			.attr("height", function(d) {return self.height-self.headerheight})
+			.attr("width", function(d) {return self.width})
+			.attr("stroke", "blue")
+			.attr("fill", "cyan")
+
+		/*
+		newsensors_body.append("text")
+			.attr("dx", function(d) { return  2; })
+      		.attr("dy", 13)
+      		.classed("pin",true)
+      		.style("text-anchor", "start")
+      		.text(function(d) { return "Pin: "+d.get("id"); })
+		*/
+
+		newsensors_body.append("text")
+			.attr("dx", this.width/2)
+      		.attr("dy", (this.height-this.headerheight-2)+"px")
+      		.classed("value",true)
+      		.style("text-anchor",  "middle")
+      		.attr("font-size", (this.height-this.headerheight)+"px")
+      		.text(function(d) { 
+      			var value = d.get("value") ? d.get("value") : 0;
+      			return value; 
+      		})
+
+      	this.update();
+					
+	},
+
+	update : function() {
+		this.sensors.select("text.value")
+			.text(function(d) { 
+     			var value = d.get("value") ? d.get("value") : 0;
+      			return value; 
+ 			})
+
+ 		this.sensors.select("g.header")
+ 			.select("text")
+			.text(function(d) { 
+     			var value = d.get("id") ? d.get("id") : 0;
+      			return "Sensor ("+ value+")"; 
+ 			})
+
+
 	}
 
 })
+
+App.views.LabLeds = Backbone.View.extend({
+	initialize : function(options) {
+		this.collection = this.collection ? this.collection : new Backbone.Collection();
+
+		this.width = 100;
+		this.headerheight = 15;
+		this.lampwidth = 20;
+		this.height = 50;
+		this.originX = 300;
+		this.originY = 10;
+		this.space = 10
+
+		this.mydata = this.collection.models;
+
+		this.svg = d3.select(this.el)
+
+		this.render();
+
+		this.listenTo(this.collection, "add", this.render, this)
+		this.listenTo(this.collection, "change", this.update, this)
+
+	},
+
+
+	render: function() {
+		var self = this;
+		var drag = d3.behavior.drag()
+		    .on('drag', function (d,i) {
+		    	var x = d.get("x") + d3.event.dx;
+		    	var y = d.get("y") + d3.event.dy;
+
+		    	d.set("x", x);
+		    	d.set("y", y);
+
+		        var target = d3.select(this);
+
+		        target.attr("transform", function (d, i) {
+		            return "translate(" + [x,y] + ")";
+		        })
+	    	})
+
+		this.leds = this.svg.selectAll("g.led")
+			.data(this.mydata,function(d) {
+				return d.get("id")
+			})
+
+		var newleds = this.leds.enter()
+			.append("g")
+			.attr("class", "led")
+			.attr("transform", function (d, i) {
+				var x = d.get("x") ? d.get("x") : self.originX;
+				var y = d.get("y") ? d.get("y") : self.originY+i*(self.height+self.space);
+				d.set({'x':x, 'y':y});
+				d.set("height", self.height);
+				d.set("width", self.width);
+		        return "translate(" + [x,y] + ")";
+		    })
+		    .call(drag)
+
+   		var newleds_header = newleds.append("g")
+    		.classed("header", true)
+
+     	newleds_header
+     		.append("rect")
+	     		.attr("height", this.headerheight)
+	     		.attr("width", this.width)
+	     		.attr("stroke", "blue")
+				.attr("fill", "#DDD")
+
+		newleds_header	
+			.append("text")
+				.attr("y", this.headerheight-2+"px")
+				.attr("x", this.width/2)
+				.attr("font-size", this.headerheight+"px")
+				.style("text-anchor",  "middle")
+				.text("Led")
+
+     	var newleds_body = newleds.append("g")
+     		.attr("transform", function (d, i) {
+		        return "translate(" + [0,self.headerheight] + ")";
+		    })
+
+		newleds_body.append("rect")
+			.attr("x", 0)
+			.attr("y", 0)
+			.attr("height", function(d) {return self.height-self.headerheight})
+			.attr("width", function(d) {return self.width})
+			.attr("stroke", "blue")
+			.attr("fill", "cyan")
+
+/*
+		newleds_body.append("text")
+			.attr("dx", function(d) { return  2; })
+      		.attr("dy", 13)
+      		.classed("pin",true)
+      		.style("text-anchor", "start")
+      		.text(function(d) { return "Pin: "+d.get("id"); })
+      		*/
+
+
+		newleds_body.append("text")
+			.attr("dx", (this.width-this.lampwidth)/2)
+      		.attr("dy", (this.height-this.headerheight-2)+"px")
+      		.classed("state",true)
+      		.attr("font-size", (this.height-this.headerheight)+"px")
+      		.style("text-anchor",  "middle")
+      		.text(function(d) { 
+      			var state = d.get("state") ? d.get("state") : 0;
+      			return state; 
+      		})
+
+      	newleds_body.append("image")
+      		.attr("xlink:href", function(d) {
+      			var state = d.get("state");
+      			return "./img/light"+state+".png"
+      		})
+      		.attr("x", this.width- this.lampwidth)
+			.attr("y", 0)
+			.attr("height",  this.height-this.headerheight)
+			.attr("width",  this.lampwidth)
+			.on("click", function(d,i) {
+				if (d.get("state") == "off") {
+					d.set("state", "on")
+				} else {
+					d.set("state", "off")
+				}
+				d.save();
+			})
+
+      	this.update();
+					
+	},
+
+	update : function() {
+		this.leds.select("text.state")
+			.text(function(d) { 
+     			var state = d.get("state") ? d.get("state") : 0;
+      			return state;  
+ 			})
+
+		this.leds.select("image")
+      		.attr("xlink:href", function(d) {
+      			var state = d.get("state");
+      			return "./img/light"+state+".png"
+      		})
+
+		this.leds.select("g.header")
+ 			.select("text")
+			.text(function(d) { 
+     			var value = d.get("id") ? d.get("id") : 0;
+      			return "Led ("+ value+")"; 
+ 			})
+
+
+	}
+
+})
+
+
 
 App.views.RemoteLed = Backbone.View.extend({
 	initialize: function() {
@@ -488,26 +1008,26 @@ App.models.Switch = Backbone.Model.extend({
 	initialize : function(options) {
 		this.sensor = null;
 		this.led = null;
-		this.set("min", 900);
+		this.set("min", 1000);
 		this.set("max", 1024);
 	},
 
 	setSensor: function(sensor) {
-		this.sensor = sensor;
-		this.listenTo(this.sensor, "change", this.checkLevel);
+		this.set("sensor",sensor);
+		this.listenTo(sensor, "change", this.checkLevel);
 	},
 
 	setLed: function(led) {
-		this.led = led;
+		this.set("led", led);
 	},
 
 	checkLevel: function() {
-		var value = this.sensor.get("value");
+		var value = this.get("sensor").get("value");
 
 		if (value >= this.get("min") && value <= this.get("max")) {
-			if (this.led && this.led.get("state") != "on") this.led.turnon();
+			if (this.get("led") && this.get("led").get("state") != "on") this.get("led").turnon();
 		} else {
-			if (this.led && this.led.get("state") != "off") this.led.turnoff();
+			if (this.get("led") && this.get("led").get("state") != "off") this.get("led").turnoff();
 		}
 
 		

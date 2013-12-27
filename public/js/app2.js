@@ -1,8 +1,6 @@
 App.baseurl = window.location.origin;
 
 $(document).ready(function() {
-	App.views.lab = new App.views.Lab();
-	$("#svgcontainer").html(App.views.lab.$el);
 
 	App.board = App.RemoteBoard();
 	App.board.connect(App.baseurl, function() {
@@ -13,21 +11,17 @@ $(document).ready(function() {
 		App.switch = new App.models.Switch();
 
 		App.sensors = new App.collections.Sensors();
-		App.views.mysensors = new App.views.Sensors({collection:App.sensors});
-		$(".mysensors").html(App.views.mysensors.$el);
 
 		App.sensors.fetch();
 		App.sensors.on("sync", function() {
-			if (!App.sensors.get("A0")) App.sensors.create({id:"A0"});
-			if (!App.sensors.get("A1")) App.sensors.create({id:"A1"});
-			if (!App.sensors.get("A2")) App.sensors.create({id:"A2"});
+			if (!App.sensors.get("A0")) App.sensors.create({id:"A0", freq:1000});
+			if (!App.sensors.get("A1")) App.sensors.create({id:"A1", freq:1000});
+			if (!App.sensors.get("A2")) App.sensors.create({id:"A2", freq:1000});
 			App.switch.setSensor(App.sensors.get("A2"));
 		});
 
 
 		App.leds = new App.collections.Leds();
-		App.views.myleds = new App.views.MyLEDs({collection:App.leds});
-		$(".myleds").html(App.views.myleds.$el);
 
 		App.leds.fetch();
 		App.leds.on("sync", function() {
@@ -37,23 +31,24 @@ $(document).ready(function() {
 			App.switch.setLed(App.leds.get(13));
 		});
 
+		App.views.lab = new App.views.Lab({sensors: App.sensors, leds: App.leds, switch: App.switch});
+		$("#svgcontainer").html(App.views.lab.$el);
+
+
 		App.testswitch  = new App.models.Switch({sensor:App.sensors.get("A2"), led:App.leds.get(13)})
 
-		App.collections.pins.fetch({
-			success: function() {			
-				App.views.ledView13 = new App.views.LEDView2({model: App.collections.pins.get(13)});
-				$(".myled13").html(App.views.ledView13.$el);
-	
-				App.views.ledView12 = new App.views.LEDView2({model: App.collections.pins.get(12)});
-				$(".myled12").html(App.views.ledView12.$el);
+		var inputmin = d3.select("input.min")
+	    	.on("change", function() { 
+	    		App.switch.set("min", this.value) 
+	    	})
 
-				App.views.lightSensorView = new App.views.LightSensorView({model: App.collections.pins.get("A2")});
-				$("#sensor2").html(App.views.lightSensorView.$el);
-
-			}
-		});
+		var inputmax = d3.select("input.max")
+	    	.on("change", function() { 
+	    		App.switch.set("max", this.value) 
+	    	})
 
 	})
+
 
 
 });
