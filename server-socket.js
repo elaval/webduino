@@ -102,12 +102,4 @@ var getLeds = function(req, res){
   webdinoApi.getLeds(req, res);
 };
 
-// dial-home device/localtunnel setup
-client = localtunnel.connect({
-    host: 'http://localtunnel.me',
-    port: PORT
-});
 
-client.on('url', function(url) {
-  console.log(url);
-});
