@@ -6,12 +6,23 @@ var path = require("path");
 var application_root = __dirname;
 
 var interfaces = require('os').networkInterfaces();
-var LOCAL_IP = interfaces.wlan0 ? interfaces.wlan0[1].address : interfaces.en1[1].address;
+
+var LOCAL_IP
+if (interfaces.wlan0) {
+  LOCAL_IP = interfaces.wlan0[1].address;
+} else if (interfaces.en1) {
+  LOCAL_IP = interfaces.en1[1].address;
+} else if (interfaces.eth0) {
+  LOCAL_IP = interfaces.eth0[1].address;
+} else {
+  LOCAL_IP = "127.0.0.1";
+} 
 var PORT = 3000;
 
 var webduino = require("./webduino");
 
 var webdinoApi = webduino(server);
+
 
 
 app.use(express.static('public'));
@@ -91,4 +102,4 @@ var getLeds = function(req, res){
 
 
 
-
+console.log(getLocalIPs())
