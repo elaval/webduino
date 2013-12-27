@@ -11,6 +11,7 @@
       "ecstatic":"*",
       "escape-regexp-component":"*",
       "assert-plus":"*",
-      "mime":""
+      "mime":"*",
+      "localtunnel": "*"
    }
 }

@@ -5,6 +5,8 @@ var app = express(),
 var path = require("path");
 var application_root = __dirname;
 
+var localtunnel = require('localtunnel');
+
 var interfaces = require('os').networkInterfaces();
 
 var LOCAL_IP
@@ -100,4 +102,12 @@ var getLeds = function(req, res){
   webdinoApi.getLeds(req, res);
 };
 
+// dial-home device/localtunnel setup
+client = localtunnel.connect({
+    host: 'http://localtunnel.me',
+    port: PORT
+});
 
+client.on('url', function(url) {
+  console.log(url);
+});
