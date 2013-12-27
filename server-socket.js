@@ -101,5 +101,3 @@ var getLeds = function(req, res){
 };
 
 
-
-console.log(getLocalIPs())
