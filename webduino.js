@@ -97,7 +97,7 @@ Webduino.prototype.getPinState = function(id, callback) {
     // pin.query does not work well with analog pins // this is a patch to get their state
     if (pin.type == "analog") {
       console.log(pin);
-      var pinstate = pin.firmata.pins[pin.firmata.analogPins[pin.addr]];
+      var pinstate = pin.io.pins[pin.io.analogPins[pin.addr]];
       pinstate.id = id;
       callback(pinstate);
     } else  {
