@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-	<title>Tide Arduino Kits for Education</title>
+	<title>Tide Webduino - Arduino over the Web</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 	<!-- Bootstrap -->
@@ -44,7 +44,10 @@
 
 <body>
 	<div class="container">
-		<h1>TIDE Webduino</h1>
+		<h1>TIDE Webduino API</h1>
+
+		Restful interface for accessing & controlling Arduino boards through the web (based on node & johnny-five.js)
+
 		
 		<div class="row" id="msg"> 
 		</div>
@@ -53,8 +56,8 @@
 		<div class="row" id="svgcontainer"></div>
 		<div class="row" id="range"> 
 			Automatic switch on ranges: <br>
-			Min: <input type="range" class="min" min="0" max="1023" value="1000" >
-			Max: <input type="range" class="max" min="0" max="1023" value="1023" >
+			Min: <input type="range" class="min" min="0" max="100" value="0" >
+			Max: <input type="range" class="max" min="0" max="100" value="10" >
 		</div>
 
 		<div class="row" id="footer"></div>

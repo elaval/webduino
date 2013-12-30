@@ -308,6 +308,10 @@ App.views.LabSensors = Backbone.View.extend({
 		this.listenTo(this.collection, "add", this.render, this)
 		this.listenTo(this.collection, "change", this.update, this)
 
+		this.formatDecimal = d3.format('.2f')
+		this.formatPercentage = d3.format('%')
+
+
 	},
 
 
@@ -395,7 +399,7 @@ App.views.LabSensors = Backbone.View.extend({
       		.style("text-anchor",  "middle")
       		.attr("font-size", (this.height-this.headerheight)+"px")
       		.text(function(d) { 
-      			var value = d.get("value") ? d.get("value") : 0;
+      			var value = d.value() ? d.value() : 0;
       			return value; 
       		})
 
@@ -404,17 +408,29 @@ App.views.LabSensors = Backbone.View.extend({
 	},
 
 	update : function() {
+		var self = this;
 		this.sensors.select("text.value")
 			.text(function(d) { 
-     			var value = d.get("value") ? d.get("value") : 0;
+				var value = "";
+				switch(d.get("type"))
+				{
+				case "temp":
+				  value = self.formatDecimal(d.value())+" º";
+				  break;
+				case "light":
+				  value = self.formatPercentage(d.value());
+				  break;
+				default:
+				  value = d.value();
+				}
+
       			return value; 
  			})
 
  		this.sensors.select("g.header")
  			.select("text")
 			.text(function(d) { 
-     			var value = d.get("id") ? d.get("id") : 0;
-      			return "Sensor ("+ value+")"; 
+      			return d.label();
  			})
 
 
@@ -997,7 +1013,87 @@ App.collections.Leds = Backbone.Collection.extend({
 	}
 }) 
 
+App.models.Sensor = Backbone.Model.extend({
+	defaults: {
+		scale : [0,1024],
+		type: null
+	},
+
+	setScale: function(range) {
+		this.set("scale", range)
+	},
+
+	setType: function(type) {
+		this.set("type", type)
+		switch(this.get("type"))
+			{
+			case "temp":
+			  this.set("scale", [0,500])
+			  break;
+			case "light":
+			  this.set("scale", [0,500])
+			  break;
+			default:
+			  this.set("scale", [0,1024])
+			}
+
+	},
+
+	label : function() {
+		switch(this.get("type"))
+			{
+			case "temp":
+			  return "Temperature"
+			  break;
+			case "light":
+			  return "Light"
+			  break;
+			case "humidity":
+			  return "Humidity"
+			  break;
+			default:
+			  return "Sensor "+this.get("id");
+			}
+	},
+
+	value: function() {
+		var value = this.get("value");
+
+		switch(this.get("type"))
+			{
+			case "temp":
+			  return this.scale(value, [0,500], [0,1024])
+			  break;
+			case "light":
+			  return this.scale(value, [0,1], [0,150])
+			  break;
+			default:
+			  return value
+			}
+	},
+
+	scale: function(value, range, domain) {
+		var rmin = range[0];
+		var rmax = range[1];
+
+		var dmin = domain[0];
+		var dmax = domain[1];
+
+		value = value > dmax ? dmax : value;
+		value = value < dmin ? dmin : value;
+
+		var scaledValue = rmin + (rmax-rmin)*(value-dmin)/(dmax-dmin)
+
+		return scaledValue;
+
+	}
+
+
+})
+
 App.collections.Sensors = Backbone.Collection.extend({
+	model: App.models.Sensor,
+
 	url: function() {
 		return App.baseurl+"/sensors"
 	}
@@ -1015,6 +1111,7 @@ App.models.Switch = Backbone.Model.extend({
 	setSensor: function(sensor) {
 		this.set("sensor",sensor);
 		this.listenTo(sensor, "change", this.checkLevel);
+		this.checkLevel();
 	},
 
 	setLed: function(led) {
@@ -1022,7 +1119,11 @@ App.models.Switch = Backbone.Model.extend({
 	},
 
 	checkLevel: function() {
-		var value = this.get("sensor").get("value");
+		var value = this.get("sensor").value();
+
+		if (this.get("sensor").get("type")=="light") {
+			value = value*100
+		}
 
 		if (value >= this.get("min") && value <= this.get("max")) {
 			if (this.get("led") && this.get("led").get("state") != "on") this.get("led").turnon();

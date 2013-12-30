@@ -17,6 +17,10 @@ $(document).ready(function() {
 			if (!App.sensors.get("A0")) App.sensors.create({id:"A0", freq:1000});
 			if (!App.sensors.get("A1")) App.sensors.create({id:"A1", freq:1000});
 			if (!App.sensors.get("A2")) App.sensors.create({id:"A2", freq:1000});
+	
+			App.sensors.get("A0").setType("temp");
+			App.sensors.get("A1").setType("humidity");
+			App.sensors.get("A2").setType("light");
 			App.switch.setSensor(App.sensors.get("A2"));
 		});
 
@@ -37,6 +41,9 @@ $(document).ready(function() {
 
 		App.testswitch  = new App.models.Switch({sensor:App.sensors.get("A2"), led:App.leds.get(13)})
 
+		App.switch.set("min", d3.select("input.min").attr("value"));
+		App.switch.set("max", d3.select("input.max").attr("value"));
+		
 		var inputmin = d3.select("input.min")
 	    	.on("change", function() { 
 	    		App.switch.set("min", this.value) 
