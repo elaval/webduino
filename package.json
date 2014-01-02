@@ -14,6 +14,12 @@
     "type": "git",
     "url": "git://github.com/elaval/webduino.git"
    },
+   "contributors": [
+   {
+      "name": "Ernesto Laval",
+      "email": "<ernesto.laval@gmail.com"
+    }
+   ]
    "bugs": {
     "url": "https://github.com/elaval/webduino/issues"
    },
