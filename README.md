@@ -1,4 +1,69 @@
 webduino
 ========
 
-Web interaction with an Arduino through the Web
+RESTful API for controlling and reading devices sensors and actuators connected to an Arduino Borad through an HTTP Connection.
+
+It is buit on top of a great set of modules:
+
+**Nodejs** - Javascript on the server!!
+**johnny-five** - Communication to Arduino boards in node
+**express** - Web server (API & local web pages)
+**socket.io** - Get events from sensors of change in state through an http connection
+
+Created by TIDE SA for the support of Makers Movement in Schools.
+
+## Quick start
+
+### Arduino
+Get an Arduino (tested on Arduino UNO) and connect to your computer through USB
+
+### NODE JS
+If you don't have it already ... install node on your computer.
+- http://nodejs.org
+- http://howtonode.org/how-to-install-nodejs
+
+### webduino
+Create a new directory and install webduino module with nmp
+```
+$ mkdir myfirstwebduino
+$ cd myfirstwebduino
+$ npm install webduino
+```
+Make sure your Arduino is connected to a USB port and run a webduino server
+```
+$ mkdir myfirstwebduino
+$ cd myfirstwebduino
+$ npm install webduino
+```
+Create your server program - server.js
+```javascript
+var webduino = require('webduino');
+var webduinoApp = webduino();
+
+var server = webduinoApp.server();
+var PORT = 8000;
+
+webduinoApp.on("ready", function() {
+  // On board ready, start listening for http requests
+  server.listen(PORT, function() {
+    // Notify local IP Addrsss & PORT
+    var IP = webduinoApp.localIPs()[0];
+    console.log("Listening on "+IP+":"+PORT)
+  });
+})
+```
+And run it
+```
+$ node server
+1388687348931 Board Connecting... 
+1388687348939 Serial Found possible serial port /dev/cu.usbmodemfa131
+1388687348941 Board -> Serialport connected /dev/cu.usbmodemfa131
+1388687352124 Board <- Serialport connected /dev/cu.usbmodemfa131
+1388687352124 Repl Initialized 
+>> Listening on 192.168.1.123:8000
+
+```
+
+
+
+ 
