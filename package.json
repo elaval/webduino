@@ -30,7 +30,7 @@
    "dependencies": {
       "express": "3.x",
       "socket.io":"*",
-      "johnny-five":"latest",
+      "johnny-five":"*",
       "node-inspector":"*",
       "restify":"*",
       "ecstatic":"*",
