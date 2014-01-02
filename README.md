@@ -65,12 +65,13 @@ $ node server
 ```
 
 ### Try it
-In a Web Borwser (on any computer from your local network) connect to the server and try
-- http://{server address}/api/leds - Get a list of led states (in JSON)
-- http://{server address}/api/leds/13 - Get state of led at Pin 13
-- http://{server address}/api/sensors - Get a list of sensors and their state
-- http://{server address}/api/sensors/A1 - Get state of sensor at Pin A1
-- http://{server address}/api/pins - Get state of each pin
+In a Web Browser (on any computer from your local network) try the following urls to get the state of Pins, Leds or Sensors
+- http://{server address}/api/leds 
+- http://{server address}/api/leds/13 
+- http://{server address}/api/sensors 
+- http://{server address}/api/sensors/A1 
+- http://{server address}/api/pins 
+- http://{server address}/api/pins/7
 
 
 
