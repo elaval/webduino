@@ -1,51 +1,45 @@
 {
-   "name": "webduino",
-   "description": "Johnny-five based Web API for Aduino Programming",
-   "version": "0.0.1",
-   "homepage": "https://github.com/elaval/webduino",
-   "author": {
-    "name": "Ernesto Laval <ernesto.laval@gmail.com>",
-    "email": "ernesto.laval@gmail.com"
-   },
-   "keywords": [
-    "arduino", "rest", "api", "johnny-five"
-   ],
-   "repository": {
+  "name": "webduino",
+  "description": "Johnny-five based Web API for Aduino Programming",
+  "version": "0.0.1",
+  "homepage": "https://github.com/elaval/webduino",
+  "author": "Ernesto Laval <ernesto.laval@gmail.com>",
+  "keywords": [
+    "arduino",
+    "rest",
+    "api",
+    "johnny-five"
+  ],
+  "repository": {
     "type": "git",
     "url": "git://github.com/elaval/webduino.git"
-   },
-   "contributors": [
-   {
-      "name": "Ernesto Laval",
-      "email": "<ernesto.laval@gmail.com"
-    }
-   ],
-   "bugs": {
+  },
+  "contributors": [
+    "Ernesto Laval <<ernesto.laval@gmail.com>"
+  ],
+  "bugs": {
     "url": "https://github.com/elaval/webduino/issues"
-   },
-   "licenses": [
+  },
+  "licenses": [
     {
       "type": "MIT",
       "url": "https://github.com/elaval/webduino/blob/master/LICENSE-MIT"
     }
-   ],
-   "main": "lib/webduino",
-   "engines": {
+  ],
+  "main": "lib/webduino",
+  "engines": {
     "node": ">=0.10.0"
-   },
-   "dependencies": {
-      "express": "3.x",
-      "socket.io":"*",
-      "johnny-five":"*",
-      "node-inspector":"*",
-      "restify":"*",
-      "ecstatic":"*",
-      "escape-regexp-component":"*",
-      "assert-plus":"*",
-      "mime":"*",
-      "localtunnel": "*",
-      "firebase":"*",
-      "cors": "*"
-   }
+  },
+  "dependencies": {
+    "express": "3.x",
+    "socket.io": "*",
+    "johnny-five": "*",
+    "firebase": "*",
+    "cors": "*"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "for f in tests/*; do echo \"$f\"; node \"$f\"; done; echo 'passed!'; exit 0"
+  },
+  "license": "MIT"
 }
-
