@@ -6,8 +6,11 @@ RESTful API for controlling and reading devices sensors and actuators connected 
 It is buit on top of a great set of modules:
 
 **Nodejs** - Javascript on the server!!
+
 **johnny-five** - Communication to Arduino boards in node
+
 **express** - Web server (API & local web pages)
+
 **socket.io** - Get events from sensors of change in state through an http connection
 
 Created by TIDE SA for the support of Makers Movement in Schools.
