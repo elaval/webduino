@@ -1,20 +1,28 @@
 var events = require("events"),
     util = require("util");
 
+// Firebase is a real time data exchnage service
+var Firebase = require("firebase");
+
 // Control Arduino Input/Output through Johnny-Five
 var five = require("johnny-five");
 
-
+// Information about digital & analog pins in each type of supported board
 var pincatalog = {
     UNO: {
       analog: ["A0","A1","A2","A3","A4","A5"],
-      digital: [0,1,2,3,4,5,6,7,8,9,10,11,12,13]
+      digital: [0,1,2,3,4,5,6,7,8,9,10,11,12,13],
+      numpins: 20
     },
     MEGA: {
-      analog: ["A0","A1","A2","A3","A4","A5","A6","A7","A8", "A9"]
+      analog: ["A0","A1","A2","A3","A4","A5","A6","A7","A8", "A9"],
+      digital: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53],
+      numpins: 64
     } ,
     LEONARDO: {
-      analog: ["A0","A1","A2","A3","A4","A5"]
+      analog: ["A0","A1","A2","A3","A4","A5"],
+      digital: [0,1,2,3,4,5,6,7,8,9,10,11,12,13],
+      numpins: 20
     }
 };
 
@@ -28,20 +36,58 @@ var Webduino = function(server) {
   var self = this;
   events.EventEmitter.call(this);
 
+  // johnny-five Pin objects for board pins
   this.pins = {};
+
+  // jonhnny-five Sensor object for analog pins (only for active sensors)
   this.sensors = {};
+
+  // store the current state of each sensor (freq, value, active)
+  // Ex. this.sensorStates["A0"] = {id:"A0", freq:250, active: true, value: 512}
+  this.sensorStates = {}
+
+  // johnny-five Led object for digital pins
   this.leds = {};
+
+  // store the current state of each led (on, strobe, time)
+  // Ex. this.ledStates[13] = {id:13, on:true, strobe: false, time: 250}
+  this.ledStates = {};
+
   this.board = null;
   this.five = five;;
   this.type;
   this.server = server;
-  this.io = require('socket.io').listen(server,  { log: false });
+  this.firebase = null;
 
+  // Set up socket.io connection
+  this.io = require('socket.io').listen(server,  { log: false });
+  self.io.sockets.on('connection',function(d) {
+    console.log("New socket.io connection: "+d.id)
+  });
+
+
+  // Initialize johnny-five Board
   this.board = new five.Board();
 
   this.board.on("ready",function() {
-    self.start(five, this.board)
-    self.io.sockets.on('connection',function() {});
+    self.type = self.board.type;
+
+    // Remember the bumber of pins when retreiving Pin states
+    self.numPins = pincatalog[self.type].numpins;
+
+    // Creates Pin objects for every pin in the board
+    self.createPins();
+
+    // Creates LED objects for every digital pin in the board
+    self.createLeds();
+
+    // Creates sensor state objects for every analog pin
+    self.createSensors();
+
+    // send socket signal indicating that the board is connected
+    self.socketBroadcastBoardConnected();
+
+    self.emit( "ready", null );
   });
 
 } 
@@ -50,64 +96,113 @@ var Webduino = function(server) {
 util.inherits( Webduino, events.EventEmitter );
 
 
-
 /**
- * start  Initialize the variables associated to pins
- * @return {Webduino}
+ * createPins  Creates Pin objects for every digital & analog pin
  */
-Webduino.prototype.start = function(_five, _board) {
-    this.five = _five;
-    this.board = _board;
-    this.type = board.type;
-    this.numPins = 0;
+Webduino.prototype.createPins = function() {
+    var analogPins = pincatalog[this.type].analog;
+    var digitalPins = pincatalog[this.type].digital;
 
     // References to analog pins
-    for (var i = 0 ; i < pincatalog[this.type].analog.length; i++) {
-      var pinid = pincatalog[this.type].analog[i]
+    for (var i = 0 ; i < analogPins.length; i++) {
+      var pinid = analogPins[i]
       this.pins[pinid] = new this.five.Pin(pinid);
-
-      // CHECK HOW TO DO THIS IN J5
-      this.pins[pinid].id = pinid
     }
 
     // References to digital pins
-    for (var i = 0 ; i < pincatalog[this.type].digital.length; i++) {
-      var pinid = pincatalog[this.type].digital[i]
+    for (var i = 0 ; i < digitalPins.length; i++) {
+      var pinid = digitalPins[i]
       this.pins[pinid] = new this.five.Pin(pinid)
+    }
+}
 
-      // CHECK HOW TO DO THIS IN J5
-      this.pins[pinid].id = pinid
+/**
+ * createLeds  Creates Led objects for every digital pin & creates a state object for each Led
+ */
+Webduino.prototype.createLeds = function() {
+    // References to digital pins
+    for (var i = 0 ; i < pincatalog[this.type].digital.length; i++) {
+      var pinid = pincatalog[this.type].digital[i];
+
+      // Create it if it doesn't exists already
+      if (!this.leds[pinid]) {
+        this.leds[pinid] = {};
+
+        if(!this.ledStates[pinid]) this.ledStates[pinid] = {};
+
+        var newled = new five.Led(pinid);
+        newled.off();
+        newled.stop();
+
+        this.leds[pinid] = newled;
+
+        this.ledStates[pinid].id = pinid;
+        this.ledStates[pinid].on = false;
+        this.ledStates[pinid].strobe = false;
+        this.ledStates[pinid].time = 250;
+
+      }
     }
 
-    this.numPins = pincatalog[this.type].analog.length + pincatalog[this.type].digital.length;
+}
 
-    this.emit( "ready", null );
+/**
+ * createSensors  Creates Sensor state objects for every Analog pin
+ * Actual johnny-five Sensor objects are not created initially (only when they become active)
+ */
+Webduino.prototype.createSensors = function() {
+    var analogPins = pincatalog[this.type].analog
 
-    return this;
-};
+    // References to digital pins
+    for (var i = 0 ; i < analogPins.length; i++) {
+      var pinid = analogPins[i];
+
+      // Create it if it doesn't exists already
+      if (!this.sensorStates[pinid]) {
+        this.sensorStates[pinid] = {};
+      }
+
+      // Don't create Led object until it becomes active (with PutSensor)
+      this.sensors[pinid] = null;
+
+      this.sensorStates[pinid].id = pinid;
+      this.sensorStates[pinid].active = false;
+      this.sensorStates[pinid].freq = 250;
+      this.sensorStates[pinid].value = null;
+    }
+
+}
 
 
 /**
  * getPinState  Get the state of a given pin id through callback function
- * @return {Webduino}
  */
 Webduino.prototype.getPinState = function(id, callback) {
     var pin = this.pins[id];
 
-    // pin.query does not work well with analog pins // this is a patch to get their state
+    // For Analog Pins, the pin.query function does not work well with analog pins // this is a patch to get their state
     if (pin.type == "analog") {
-      console.log(pin);
-      var pinstate = pin.io.pins[pin.io.analogPins[pin.addr]];
+      var pinstate;
+      if (pin.io) {
+        console.log("io")
+        pinstate = pin.io.pins[pin.io.analogPins[pin.addr]];
+      }
+      else {
+        console.log("firmata")
+        pinstate = pin.firmata.pins[pin.firmata.analogPins[pin.addr]];
+      }
       pinstate.id = id;
       callback(pinstate);
-    } else  {
+    } 
+
+    // For Digital Pins, the query function works
+    else  {
       pin.query(function(state) {
         state.id = id;
         callback(state)
       });      
     }
 
-    return this;
 };
 
 /**
@@ -150,7 +245,6 @@ Webduino.prototype.getPins = function(req, res) {
 
 /**
  * putPin  Set the value of a PIN 
- * @return {Webduino}
  */ 
 Webduino.prototype.putPin = function(req, res) {
   var id = req.params.id;
@@ -196,33 +290,70 @@ Webduino.prototype.getSensors = function(req, res) {
 
  /**
  * putSensor  Add a new sensor on the given pin id
- * @return {Webduino}
  */ 
 Webduino.prototype.putSensor = function(req, res) {
   var self = this;
 
   var id = req.params.id ? req.params.id : "A0";
-  var freq = req.body.freq ? req.body.freq : 25;
+  var previousFreq;
 
-  if (!this.sensors[id]) {
-    this.sensors[id] = {};
-    this.sensors[id].j5sensor = new five.Sensor({'pin':id, 'freq':freq});
+   // Confirm that we had the state for this Sensor
+  if (this.sensorStates[id]) {
+    // Remind existint frequency (to check if we need to create a new one or mantain the existing one)
+    previousFreq = this.sensorStates[id].freq
   }
 
-  var sensor = this.sensors[id];
-  sensor.freq = freq;
-   
-  // Broadcast through sockets.io when each sample is received
-  sensor.j5sensor.on("data", function() {
-    var state = {};
-    state.id = id;
-    state.value = this.value;
-    state.mode = this.mode;
+  // If not, create a new sensor stata object
+  else {
+    this.sensorStates[id] = {}
+  }
 
-    self.socketBroadcastSensorState(state);
-  })
+  var state = this.sensorStates[id];
+  state.id = id;
 
-  var state = this.getSensorState(id)
+  // Get new state from body data Ex: {active:true, freq:500}
+  state.active = req.body.active ? req.body.active : false;
+  state.freq = req.body.freq ? req.body.freq : 500;
+
+  // Sensor should be activated
+  if (state.active) {
+
+    // There is no Sensor object created or there is one with a different frequency
+    if (!this.sensors[id] || (this.sensors[id] && (state.freq != previousFreq))) {
+      // Deactiviate existing sensor with different frequency
+      if (this.sensors[id] && (state.freq != previousFreq)) {
+        this.sensors[id].removeAllListeners("data");
+      }
+
+      // Create new Sensor
+      this.sensors[id] = new five.Sensor({'pin':state.id, 'freq':state.freq});
+
+      // Actions to be taken on data events
+      this.sensors[id].on("data", function() {
+        var state = self.sensorStates[id];
+
+        // Update state value
+        state.value = this.value;
+
+        // Broadcast new value
+        self.socketBroadcastSensorState(state);
+      })
+    }
+
+  } 
+
+  // Sensor should be deactivated
+  else {
+    // Check if it existes and deactivate it
+    if (this.sensors[id]) {
+      // Stop listening to data events
+      this.sensors[id].removeAllListeners("data");
+
+      this.sensors[id] = null;
+    }
+  }
+
+
   res.send(state);
 }
 
@@ -233,46 +364,55 @@ Webduino.prototype.putLed = function(req, res) {
   var self = this;
 
   var id = req.params.id ? req.params.id : "13";
-  var state = req.body.state ? req.body.state : "off";
-  var strobe = req.body.strobe ? req.body.strobe : false;
-  var strobetime = req.body.strobetime ? req.body.strobetime : 500;
 
+  // Confirm that we had the state for this Led
+  if (!this.ledStates[id]) {
+    this.ledStates[id] = {}
+  }
+
+  var state = this.ledStates[id];
+  state.id = id;
+
+  // Get new state from body data Ex: {on:true, strobe:false, time:250}
+  state.on = req.body.on ? req.body.on : false;
+  state.strobe = req.body.strobe ? req.body.strobe : false;
+  state.time = req.body.time ? req.body.time : 500;
+
+  // Confirm that we have a Johnny-Five Led Object for this Led
   if (!this.leds[id]) {
-    this.leds[id] = {};
-    this.leds[id].j5led = new five.Led(id);
+    this.leds[id]= new five.Led(id);
   } 
 
   var led = this.leds[id];
 
-  if (state == "on") {led.j5led.on();} else {led.j5led.off();}
-  led.state = state;
-
-  if (strobe) {
-    led.j5led.strobe(strobetime);
+  // Turn Led on/off according to obtained state
+  if (state.on) {
+    led.on(); 
   } else {
-    led.j5led.stop();
+    led.off();
   }
 
-  led.strobe = strobe;
-  led.strobetime = strobetime;
-
-  var state = this.getLedState(id);
+  // Activate / deactivate strobe
+  if (state.strobe) {
+    led.strobe(state.time);
+  } else {
+    led.stop();
+  }
 
   self.socketBroadcastLedState(state);
-
 
   res.send(state);
 }
 
  /**
- * postLed  
+ * getLed  
  */ 
 Webduino.prototype.getLed = function(req, res) {
   var self = this;
 
   var id = req.params.id ? req.params.id : "13";
 
-  var state = this.getLedState(id)
+  var state = this.ledStates[id] ? this.ledStates[id] : {};
 
   res.send(state);
 }
@@ -285,27 +425,13 @@ Webduino.prototype.getLeds = function(req, res) {
   var out = [];
 
   for (id in this.leds) {
-    var state = this.getLedState(id)
+    var state = this.ledStates[id] ? this.ledStates[id] : {};
     out.push(state);
   }
 
   res.send(out);
 }
 
-/**
-* getLedState  
-*/ 
-Webduino.prototype.getLedState = function(id) {
-  var state = {}
-  if (this.leds[id]) {
-    var led = this.leds[id];
-    state.id = id;
-    state.state = led.state;
-    state.strobe = led.strobe;
-    state.strobetime = led.strobetime;
-  }
-  return state;
-}
 
 /**
 * getSensorState  
@@ -317,8 +443,32 @@ Webduino.prototype.getSensorState = function(id) {
     state.id = id;
     state.freq = sensor.freq;
   }
-  return state;
+  //return state;
+
+  return this.sensorStates[id] ? this.sensorStates[id] : {};
 }
+
+/**
+* getBoard 
+*/ 
+Webduino.prototype.getBoard = function(req, res) {
+
+  var state = {}
+  if (this.board) {
+    state.id = this.board.id;
+    state.type = this.board.type;
+    state.port = this.board.port;
+  }
+  res.send(state);
+}
+
+/**
+* getBoard 
+*/ 
+Webduino.prototype.firebase = function(ref) {
+  this.firebase = new Firebase(ref)
+}
+
 
 /**
  * socketBroadcastPinState  Set the value of a PIN 
@@ -334,6 +484,9 @@ Webduino.prototype.socketBroadcastPinState = function(state) {
  */ 
 Webduino.prototype.socketBroadcastSensorState = function(state) {
   this.io.sockets.emit("sensor", state)
+  if (this.firebase) {
+    this.firebase.child('sensors/'+state.id).set(state);
+  }
 }
 
 /**
@@ -342,6 +495,17 @@ Webduino.prototype.socketBroadcastSensorState = function(state) {
  */ 
 Webduino.prototype.socketBroadcastLedState = function(state) {
   this.io.sockets.emit("led", state)
+  if (this.firebase) {
+    this.firebase.child('leds/'+state.id).set(state);
+  }
+}
+
+/**
+ * socketBroadcastBoardConnected  informs board connection 
+ * @return {Webduino}
+ */ 
+Webduino.prototype.socketBroadcastBoardConnected = function() {
+  this.io.sockets.emit("board", {state:"on"})
 }
 
 

@@ -1,17 +1,74 @@
 {
-   "name": "demo1",
-   "description": "First Express app",
+   "name": "webduino",
+   "description": "Johnny-five based Web API for Aduino Programming",
    "version": "0.0.1",
+   "homepage": "https://github.com/elaval/webduino",
+   "author": {
+    "name": "Ernesto Laval <ernesto.laval@gmail.com>",
+    "email": "ernesto.laval@gmail.com"
+   },
+   "keywords": [
+    "arduino", "rest", "api", "johnny-five"
+   ],
+   "repository": {
+    "type": "git",
+    "url": "git://github.com/elaval/webduino.git"
+   },
+   "bugs": {
+    "url": "https://github.com/elaval/webduino/issues"
+   },
+   "licenses": [
+    {
+      "type": "MIT",
+      "url": "https://github.com/elaval/webduino/blob/master/LICENSE-MIT"
+    }
+   ],
+   "main": "lib/webduino",
    "dependencies": {
       "express": "3.x",
       "socket.io":"*",
-      "johnny-five":"*",
+      "johnny-five":"latest",
       "node-inspector":"*",
       "restify":"*",
       "ecstatic":"*",
       "escape-regexp-component":"*",
       "assert-plus":"*",
       "mime":"*",
-      "localtunnel": "*"
+      "localtunnel": "*",
+      "firebase":"*",
+      "cors": "*"
    }
+}
+
+
+
+
+  "engines": {
+    "node": ">=0.10.0"
+  },
+  "dependencies": {
+    "colors": ">=0.5.1",
+    "firmata": ">=0.2.9",
+    "lodash": ">=0.1.0",
+    "es6-collections": ">=0.0.1",
+    "compulsive": "latest",
+    "temporal": "latest",
+    "descriptor": "latest",
+    "serialport": "latest",
+    "nanotimer": "0.3.0"
+  },
+  "devDependencies": {
+    "async": "~0.2.9",
+    "optimist": "~0.5.2",
+    "keypress": "latest",
+    "sinon": "~1.7.3",
+    "grunt": "~0.4.1",
+    "grunt-contrib-jshint": "~0.6.0",
+    "grunt-contrib-nodeunit": "~0.2.0",
+    "grunt-jsbeautifier": "~0.2.2"
+  },
+  "keywords": [],
+  "scripts": {
+    "test" : "grunt"
+  }
 }

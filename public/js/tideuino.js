@@ -12,7 +12,8 @@ App.views.Lab = Backbone.View.extend({
 		this.mydata = this.sensors.models;
 
 		this.svg = d3.select(this.el).append("svg")
-			.attr("height", 300)
+			.attr("height", 1024)
+			.attr("width", "100%")
 			.append("g");
 
 		this.render();
@@ -35,7 +36,7 @@ App.views.LabSwitch = Backbone.View.extend({
 		this.mydata = [this.model];
 
 		_.each(this.mydata,function(d,i) {
-			d.set({x:150, y:200+i*50, value:"0"})
+			d.set({x:150, y:100+i*50, value:"0"})
 		});
 
 		this.svg = d3.select(this.el)
@@ -302,10 +303,12 @@ App.views.LabSensors = Backbone.View.extend({
 		});
 
 		this.svg = d3.select(this.el)
+		this.containerWidth = 600;
 
 		this.render();
 
 		this.listenTo(this.collection, "add", this.render, this)
+		this.listenTo(this.collection, "sync", this.render, this)
 		this.listenTo(this.collection, "change", this.update, this)
 
 		this.formatDecimal = d3.format('.2f')
@@ -337,12 +340,26 @@ App.views.LabSensors = Backbone.View.extend({
 				return d.get("id")
 			})
 
+		var pos = function(i) {
+			var columnWith = self.width+self.space;
+			var columnHeight = self.height+self.space;
+
+			var columnsPerRow = Math.floor(self.containerWidth / columnWith);
+			var row = Math.floor(i / columnsPerRow);
+			var column = i % columnsPerRow
+
+			var x = self.originX+column*columnWith;
+			var y = self.originY+row*columnHeight;
+
+			return [x,y];
+		}
+
 		var newsensors = this.sensors.enter()
 			.append("g")
 			.attr("class", "sensor")
 			.attr("transform", function (d, i) {
-				var x = d.get("x") ? d.get("x") : self.originX;
-				var y = d.get("y") ? d.get("y") : self.originY+i*(self.height+self.space);
+				var x = d.get("x") ? d.get("x") : pos(i)[0];
+				var y = d.get("y") ? d.get("y") : pos(i)[1];
 				d.set({'x':x, 'y':y});
 				d.set("width", self.width);
 				d.set("height", self.height);
@@ -442,21 +459,24 @@ App.views.LabLeds = Backbone.View.extend({
 	initialize : function(options) {
 		this.collection = this.collection ? this.collection : new Backbone.Collection();
 
-		this.width = 100;
+		this.width = 60;
 		this.headerheight = 15;
 		this.lampwidth = 20;
 		this.height = 50;
-		this.originX = 300;
-		this.originY = 10;
+		this.originX = 10;
+		this.originY = 200;
 		this.space = 10
 
 		this.mydata = this.collection.models;
+
+		this.containerWidth = 600;
 
 		this.svg = d3.select(this.el)
 
 		this.render();
 
 		this.listenTo(this.collection, "add", this.render, this)
+		this.listenTo(this.collection, "sync", this.render, this)
 		this.listenTo(this.collection, "change", this.update, this)
 
 	},
@@ -479,6 +499,20 @@ App.views.LabLeds = Backbone.View.extend({
 		        })
 	    	})
 
+	    var pos = function(i) {
+			var columnWith = self.width+self.space;
+			var columnHeight = self.height+self.space;
+
+			var columnsPerRow = Math.floor(self.containerWidth / columnWith);
+			var row = Math.floor(i / columnsPerRow);
+			var column = i % columnsPerRow
+
+			var x = self.originX+column*columnWith;
+			var y = self.originY+row*columnHeight;
+
+			return [x,y];
+		}
+
 		this.leds = this.svg.selectAll("g.led")
 			.data(this.mydata,function(d) {
 				return d.get("id")
@@ -488,8 +522,8 @@ App.views.LabLeds = Backbone.View.extend({
 			.append("g")
 			.attr("class", "led")
 			.attr("transform", function (d, i) {
-				var x = d.get("x") ? d.get("x") : self.originX;
-				var y = d.get("y") ? d.get("y") : self.originY+i*(self.height+self.space);
+				var x = d.get("x") ? d.get("x") : pos(i)[0];
+				var y = d.get("y") ? d.get("y") : pos(i)[1];
 				d.set({'x':x, 'y':y});
 				d.set("height", self.height);
 				d.set("width", self.width);
@@ -551,7 +585,7 @@ App.views.LabLeds = Backbone.View.extend({
 
       	newleds_body.append("image")
       		.attr("xlink:href", function(d) {
-      			var state = d.get("state");
+      			var state = d.get("on") ? "on" : "off";
       			return "./img/light"+state+".png"
       		})
       		.attr("x", this.width- this.lampwidth)
@@ -559,10 +593,11 @@ App.views.LabLeds = Backbone.View.extend({
 			.attr("height",  this.height-this.headerheight)
 			.attr("width",  this.lampwidth)
 			.on("click", function(d,i) {
-				if (d.get("state") == "off") {
-					d.set("state", "on")
+				// Toggle between on/off state of the Led
+				if (d.get("on") == false) {
+					d.set("on", true)
 				} else {
-					d.set("state", "off")
+					d.set("on", false)
 				}
 				d.save();
 			})
@@ -574,15 +609,15 @@ App.views.LabLeds = Backbone.View.extend({
 	update : function() {
 		this.leds.select("text.state")
 			.text(function(d) { 
-     			var state = d.get("state") ? d.get("state") : 0;
-      			return state;  
+      			var state = d.get("on") ? "on" : "off";
+      			return state
  			})
 
 		this.leds.select("image")
       		.attr("xlink:href", function(d) {
-      			var state = d.get("state");
+     			var state = d.get("on") ? "on" : "off";
       			return "./img/light"+state+".png"
-      		})
+       		})
 
 		this.leds.select("g.header")
  			.select("text")
@@ -985,22 +1020,22 @@ App.models.Pin = Backbone.Model.extend({
 
 App.collections.Pins = Backbone.Collection.extend({
 	model:App.models.Pin,
-	url: function() {return App.baseurl+"/pins"}
+	url: function() {return App.baseurl+"/api/pins"}
 })
 
 // Led - Models
 App.models.Led = Backbone.Model.extend({
 	url: function() {
-		return App.baseurl+"/leds/"+this.id;
+		return App.baseurl+"/api/leds/"+this.id;
 	},
 
 	turnon: function() {
-		this.set("state", "on");
+		this.set("on", true);
 		this.save();
 	},
 
 	turnoff: function() {
-		this.set("state", "off");
+		this.set("on", false);
 		this.save();
 	}
 }) 
@@ -1009,7 +1044,7 @@ App.collections.Leds = Backbone.Collection.extend({
 	model: App.models.Led,
 
 	url: function() {
-		return App.baseurl+"/leds";
+		return App.baseurl+"/api/leds";
 	}
 }) 
 
@@ -1059,13 +1094,14 @@ App.models.Sensor = Backbone.Model.extend({
 	value: function() {
 		var value = this.get("value");
 
+
 		switch(this.get("type"))
 			{
 			case "temp":
 			  return this.scale(value, [0,500], [0,1024])
 			  break;
 			case "light":
-			  return this.scale(value, [0,1], [0,150])
+			  return this.scale(value, [0,1], [0,500])
 			  break;
 			default:
 			  return value
@@ -1095,7 +1131,7 @@ App.collections.Sensors = Backbone.Collection.extend({
 	model: App.models.Sensor,
 
 	url: function() {
-		return App.baseurl+"/sensors"
+		return App.baseurl+"/api/sensors"
 	}
 })
 

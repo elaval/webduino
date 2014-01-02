@@ -12,27 +12,41 @@ $(document).ready(function() {
 
 		App.sensors = new App.collections.Sensors();
 
-		App.sensors.fetch();
+		App.sensors.fetch({
+			success: function() {
+				App.sensors.get("A0").set("active",true);
+				App.sensors.get("A0").save();
+				App.sensors.get("A1").set("active",true);
+				App.sensors.get("A1").save();
+				App.sensors.get("A2").set("active",true);
+				App.sensors.get("A2").save();
+
+		
+				App.sensors.get("A0").setType("temp");
+				App.sensors.get("A1").setType("humidity");
+				App.sensors.get("A2").setType("light");
+				App.switch.setSensor(App.sensors.get("A2"));
+			},
+
+		});
+
+		App.sensors.on("all", function(a,b,c,d) {
+			//console.log("Sensor: "+a+b+c+d);
+
+		});
 		App.sensors.on("sync", function() {
-			if (!App.sensors.get("A0")) App.sensors.create({id:"A0", freq:1000});
-			if (!App.sensors.get("A1")) App.sensors.create({id:"A1", freq:1000});
-			if (!App.sensors.get("A2")) App.sensors.create({id:"A2", freq:1000});
-	
-			App.sensors.get("A0").setType("temp");
-			App.sensors.get("A1").setType("humidity");
-			App.sensors.get("A2").setType("light");
-			App.switch.setSensor(App.sensors.get("A2"));
 		});
 
 
 		App.leds = new App.collections.Leds();
 
-		App.leds.fetch();
+		App.leds.fetch({
+			success: function() {
+				App.switch.setLed(App.leds.get(13));
+			}
+		});
 		App.leds.on("sync", function() {
-			if (!App.leds.get(13)) App.leds.create({id:13});
-			if (!App.leds.get(12)) App.leds.create({id:12});
-			if (!App.leds.get(11)) App.leds.create({id:11});
-			App.switch.setLed(App.leds.get(13));
+
 		});
 
 		App.views.lab = new App.views.Lab({sensors: App.sensors, leds: App.leds, switch: App.switch});
@@ -96,10 +110,17 @@ App.RemoteBoard = function() {
 		socket.on("led", function(data) {
 			var id = data.id;
 
+			console.log(data);
+
 			if (App.leds && App.leds.get(id)) {
 				App.leds.get(id).set(data);
 			}
 
+		});
+
+		// Listen to board connection
+		socket.on("board", function(data) {
+			console.log(data);
 		});
 
 		
