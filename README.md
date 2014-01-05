@@ -76,6 +76,8 @@ In a Web Browser (on any computer from your local network) try the following url
 - http://{server address}/api/pins 
 - http://{server address}/api/pins/7
 
+## Complete API Docs
+The complete API docs can be found [here](http://htmlpreview.github.io/?https://raw.github.com/elaval/webduino/master/doc/api/index.html)
 
 
  
