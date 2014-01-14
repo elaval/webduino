@@ -1,7 +1,7 @@
 {
   "name": "webduino",
   "description": "Johnny-five based Web API for Aduino Programming",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "homepage": "https://github.com/elaval/webduino",
   "author": "Ernesto Laval <ernesto.laval@gmail.com>",
   "keywords": [
