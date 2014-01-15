@@ -1,22 +1,16 @@
 {
   "name": "webduino",
   "description": "Johnny-five based Web API for Aduino Programming",
-  "version": "0.0.4",
+  "version": "0.0.6",
   "homepage": "https://github.com/elaval/webduino",
-  "author": "Ernesto Laval <ernesto.laval@gmail.com>",
-  "keywords": [
-    "arduino",
-    "rest",
-    "api",
-    "johnny-five"
-  ],
+  "author": {
+    "name": "Ernesto Laval",
+    "email": "ernesto.laval@gmail.com"
+  },
   "repository": {
     "type": "git",
     "url": "git://github.com/elaval/webduino.git"
   },
-  "contributors": [
-    "Ernesto Laval <<ernesto.laval@gmail.com>"
-  ],
   "bugs": {
     "url": "https://github.com/elaval/webduino/issues"
   },
@@ -30,6 +24,9 @@
   "engines": {
     "node": ">=0.10.0"
   },
+  "scripts": {
+    "test": "grunt nodeunit"
+  },
   "dependencies": {
     "express": "3.x",
     "socket.io": "*",
@@ -37,9 +34,16 @@
     "firebase": "*",
     "cors": "*"
   },
-  "devDependencies": {},
-  "scripts": {
-    "test": "for f in tests/*; do echo \"$f\"; node \"$f\"; done; echo 'passed!'; exit 0"
+  "devDependencies": {
+    "grunt-contrib-jshint": "~0.6.4",
+    "grunt-contrib-nodeunit": "~0.2.0",
+    "grunt-contrib-watch": "~0.5.3",
+    "grunt": "~0.4.2"
   },
-  "license": "MIT"
+  "keywords": [
+    "arduino",
+    "rest",
+    "api",
+    "johnny-five"
+  ]
 }
